@@ -12,7 +12,6 @@ const config = {
     './components/**/*.{ts,tsx}',
     './lib/**/*.{ts,tsx}',
   ],
-  darkMode: 'class',
   plugins: [animate, containerQueries, forms, typography],
   theme: {
     container: {
