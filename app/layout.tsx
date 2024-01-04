@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import type { ReactNode } from 'react';
 
-import { cn } from '@/utils';
+import { cn } from '@/lib/utils';
 import { Inter, Roboto_Mono } from 'next/font/google';
 
 import './globals.css';
