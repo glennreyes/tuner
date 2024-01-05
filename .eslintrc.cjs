@@ -7,6 +7,8 @@ module.exports = {
       { afterHashbangComment: true },
     ],
     '@typescript-eslint/no-floating-promises': ['error', { ignoreIIFE: true }],
+    '@typescript-eslint/sort-type-constituents': 'off',
     'import/consistent-type-specifier-style': 'error',
+    'unicorn/no-array-reduce': 'off',
   },
 };

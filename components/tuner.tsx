@@ -1,79 +1,91 @@
 'use client';
 
-import type { PitchDetector } from 'pitchfinder/lib/detectors/types';
-import type { FC } from 'react';
+import { useState } from 'react';
 
-import { Note } from '@tonaljs/tonal';
-import { YIN } from 'pitchfinder';
-import { useRef, useState } from 'react';
-import { Meter, UserMedia, Waveform } from 'tone';
+const minDecibels = -60; // Minimum decibels representing 0% volume
+const maxDecibels = 0; // Maximum decibels representing 100% volume
+const decibelsToPercentage = (decibels: number) =>
+  ((decibels - minDecibels) / (maxDecibels - minDecibels)) * 100;
+const tuning = {
+  '82.41': 'E2',
+  '110': 'A2',
+  '146.83': 'D3',
+  '196': 'G3',
+  '246.94': 'B3',
+  '329.63': 'E4',
+} as const;
 
-const standardTuning = ['E2', 'A2', 'D3', 'G3', 'B3', 'E4'] as const;
-const frequencyToNote = (frequency: ReturnType<PitchDetector>) => {
-  if (!frequency) {
-    return '-';
-  }
+export const Tuner = () => {
+  const [isListening, setIsListening] = useState(false);
+  const [audioContext, setAudioContext] = useState<AudioContext | null>(null);
+  const [frequency, setFrequency] = useState(0);
+  const [tone, setTone] = useState<(typeof tuning)[keyof typeof tuning] | null>(
+    null,
+  );
+  const [volume, setVolume] = useState(0);
+  const handleOn = async () => {
+    const context = new AudioContext();
+    const analyser = context.createAnalyser();
 
-  // Convert frequency to a note name
-  const note = Note.fromFreq(frequency);
+    analyser.fftSize = 2048;
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const microphone = context.createMediaStreamSource(stream);
 
-  // If the conversion isn't successful, return 'No Note'
-  if (!note) {
-    return 'No Note';
-  }
+    microphone.connect(analyser);
 
-  // eslint-disable-next-line unicorn/no-array-reduce
-  return standardTuning.reduce((closestNote, tuningNote) => {
-    const currentNoteFreq = Note.freq(tuningNote);
-    const closestNoteFreq = Note.freq(closestNote);
-    const currentDiff = Math.abs(currentNoteFreq ?? 0 - frequency);
-    const closestDiff = Math.abs(closestNoteFreq ?? 0 - frequency);
+    const bufferLength = analyser.frequencyBinCount;
+    const dataArray = new Float32Array(bufferLength);
+    const getData = () => {
+      analyser.getFloatFrequencyData(dataArray);
 
-    return currentDiff < closestDiff ? tuningNote : closestNote;
-  }, '-');
-};
+      const { maxIndex, maxVolume } = dataArray.reduce(
+        (acc, decibels, index) => {
+          const volume = decibelsToPercentage(decibels);
 
-export const Tuner: FC = () => {
-  const [isMicOpen, setIsMicOpen] = useState(false);
-  const [currentNote, setCurrentNote] = useState('');
-  const mic = useRef<UserMedia>();
-  const turnOn = async () => {
-    const meter = new Meter();
-    const analyzer = new Waveform();
+          if (volume > acc.maxVolume) {
+            return { maxIndex: index, maxVolume: volume };
+          }
 
-    mic.current = new UserMedia().connect(meter).connect(analyzer);
-    await mic.current.open();
-    setIsMicOpen(true);
+          return acc;
+        },
+        { maxIndex: -1, maxVolume: 0 },
+      );
+      const frequency = (maxIndex * context.sampleRate) / analyser.fftSize;
+      const closestTone = Object.keys(tuning).reduce((prev, current) =>
+        Math.abs(Number(current) - frequency) <
+        Math.abs(Number(prev) - frequency)
+          ? current
+          : prev,
+      ) as keyof typeof tuning;
 
-    const detectPitch = () => {
-      const detect = YIN();
-      const updatePitch = () => {
-        const waveform = analyzer.getValue();
-        const frequency = detect(waveform);
-        const note = frequencyToNote(frequency);
-
-        setCurrentNote(note);
-        requestAnimationFrame(updatePitch);
-      };
-
-      requestAnimationFrame(updatePitch);
+      setTone(maxVolume ? tuning[closestTone] : null);
+      setFrequency(maxVolume ? frequency : 0);
+      setVolume(maxVolume);
+      requestAnimationFrame(getData);
     };
 
-    detectPitch();
+    getData();
+    setAudioContext(context);
+    setIsListening(true);
   };
-  const turnOff = () => {
-    mic.current?.close();
-    setIsMicOpen(false);
+  const handleOff = async () => {
+    await audioContext?.close();
+    setAudioContext(null);
+    setIsListening(false);
   };
-  const handleClick = isMicOpen ? turnOff : turnOn;
 
   return (
-    <div className="grid gap-2">
-      <button onClick={handleClick}>
-        {isMicOpen ? 'Turn off' : 'Turn on'}
+    <div className="grid justify-center gap-2">
+      <button onClick={isListening ? handleOff : handleOn}>
+        {isListening ? 'End' : 'Start'}
       </button>
-      <p className="text-center text-sm">{isMicOpen ? 'Mic on' : 'Mic off'}</p>
-      <p className="text-9xl font-bold">{isMicOpen ? currentNote : '-'}</p>
+      <p className="text-center text-9xl font-bold tabular-nums">
+        {tone ?? '-'}
+      </p>
+      <p className="text-center font-bold tabular-nums">
+        {frequency.toFixed(2)} Hz
+      </p>
+      <p className="text-center font-bold">{volume.toFixed(2)}</p>
     </div>
   );
 };
