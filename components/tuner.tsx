@@ -5,16 +5,17 @@ import React, { useCallback, useState } from 'react';
 import { Analyser, UserMedia, context, start } from 'tone';
 
 const isSilent = (data: Float32Array) => {
-  const sumOfSquares = data.reduce((accumulator, currentValue) => {
-    return accumulator + currentValue * currentValue;
-  }, 0);
+  const sumOfSquares = data.reduce(
+    (accumulator, currentValue) => accumulator + currentValue * currentValue,
+    0,
+  );
   const rootMeanSquare = Math.sqrt(sumOfSquares / data.length);
 
   return rootMeanSquare < 0.01;
 };
 
 export const Tuner: React.FC = () => {
-  const [pitch, setPitch] = useState<number | null>(null);
+  const [pitch, setPitch] = useState<null | number>(null);
   const [isListening, setIsListening] = useState(false);
   const detectPitch = useCallback(async () => {
     if (isListening) {
