@@ -1,91 +1,65 @@
 'use client';
 
-import { useState } from 'react';
+import { PitchDetector } from 'pitchy';
+import React, { useCallback, useState } from 'react';
+import { Analyser, UserMedia, context, start } from 'tone';
 
-const minDecibels = -60; // Minimum decibels representing 0% volume
-const maxDecibels = 0; // Maximum decibels representing 100% volume
-const decibelsToPercentage = (decibels: number) =>
-  ((decibels - minDecibels) / (maxDecibels - minDecibels)) * 100;
-const tuning = {
-  '82.41': 'E2',
-  '110': 'A2',
-  '146.83': 'D3',
-  '196': 'G3',
-  '246.94': 'B3',
-  '329.63': 'E4',
-} as const;
+const isSilent = (data: Float32Array) => {
+  const sumOfSquares = data.reduce((accumulator, currentValue) => {
+    return accumulator + currentValue * currentValue;
+  }, 0);
+  const rootMeanSquare = Math.sqrt(sumOfSquares / data.length);
 
-export const Tuner = () => {
+  return rootMeanSquare < 0.01;
+};
+
+export const Tuner: React.FC = () => {
+  const [pitch, setPitch] = useState<number | null>(null);
   const [isListening, setIsListening] = useState(false);
-  const [audioContext, setAudioContext] = useState<AudioContext | null>(null);
-  const [frequency, setFrequency] = useState(0);
-  const [tone, setTone] = useState<(typeof tuning)[keyof typeof tuning] | null>(
-    null,
-  );
-  const [volume, setVolume] = useState(0);
-  const handleOn = async () => {
-    const context = new AudioContext();
-    const analyser = context.createAnalyser();
+  const detectPitch = useCallback(async () => {
+    if (isListening) {
+      return;
+    }
 
-    analyser.fftSize = 2048;
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    const microphone = context.createMediaStreamSource(stream);
+    setIsListening(true);
 
-    microphone.connect(analyser);
+    await start();
+    const analyser = new Analyser('waveform', 2048);
+    const microphone = new UserMedia().connect(analyser);
 
-    const bufferLength = analyser.frequencyBinCount;
-    const dataArray = new Float32Array(bufferLength);
-    const getData = () => {
-      analyser.getFloatFrequencyData(dataArray);
+    await microphone.open();
 
-      const { maxIndex, maxVolume } = dataArray.reduce(
-        (acc, decibels, index) => {
-          const volume = decibelsToPercentage(decibels);
+    const getPitch = () => {
+      const dataArray = analyser.getValue() as Float32Array;
 
-          if (volume > acc.maxVolume) {
-            return { maxIndex: index, maxVolume: volume };
-          }
+      if (!isSilent(dataArray)) {
+        const frequency = PitchDetector.forFloat32Array(analyser.size);
+        const [pitch] = frequency.findPitch(dataArray, context.sampleRate);
 
-          return acc;
-        },
-        { maxIndex: -1, maxVolume: 0 },
-      );
-      const frequency = (maxIndex * context.sampleRate) / analyser.fftSize;
-      const closestTone = Object.keys(tuning).reduce((prev, current) =>
-        Math.abs(Number(current) - frequency) <
-        Math.abs(Number(prev) - frequency)
-          ? current
-          : prev,
-      ) as keyof typeof tuning;
+        setPitch(pitch);
+      }
 
-      setTone(maxVolume ? tuning[closestTone] : null);
-      setFrequency(maxVolume ? frequency : 0);
-      setVolume(maxVolume);
-      requestAnimationFrame(getData);
+      requestAnimationFrame(getPitch);
     };
 
-    getData();
-    setAudioContext(context);
-    setIsListening(true);
-  };
-  const handleOff = async () => {
-    await audioContext?.close();
-    setAudioContext(null);
+    getPitch();
+  }, [isListening]);
+  const handleStart = () => detectPitch();
+  const handleStop = () => {
     setIsListening(false);
+    setPitch(null);
   };
 
   return (
-    <div className="grid justify-center gap-2">
-      <button onClick={isListening ? handleOff : handleOn}>
-        {isListening ? 'End' : 'Start'}
+    <div>
+      <h1>Pitch Detector</h1>
+      <button disabled={isListening} onClick={handleStart}>
+        Start
       </button>
-      <p className="text-center text-9xl font-bold tabular-nums">
-        {tone ?? '-'}
-      </p>
-      <p className="text-center font-bold tabular-nums">
-        {frequency.toFixed(2)} Hz
-      </p>
-      <p className="text-center font-bold">{volume.toFixed(2)}</p>
+      <button disabled={!isListening} onClick={handleStop}>
+        Stop
+      </button>
+      {pitch !== null && <p>Detected Pitch: {pitch.toFixed(2)} Hz</p>}
     </div>
   );
 };
