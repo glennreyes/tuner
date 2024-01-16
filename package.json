@@ -22,7 +22,7 @@
     "tone": "^14.7.77"
   },
   "devDependencies": {
-    "@napaling/eslint-config": "^0.0.0-alpha.2",
+    "@napaling/eslint-config": "^0.0.0-alpha.6",
     "@tailwindcss/container-queries": "^0.1.1",
     "@tailwindcss/forms": "^0.5.7",
     "@tailwindcss/typography": "^0.5.10",
