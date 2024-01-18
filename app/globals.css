@@ -60,6 +60,12 @@
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 40% 98%;
 
+    --warning: 38 92% 50%;
+    --warning-foreground: 48 96% 89%;
+
+    --success: 145.7 100% 30.2%;
+    --success-foreground: 145.7 100% 30.2%;
+
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
     --ring: 212.7 26.8% 83.9%;
@@ -68,6 +74,6 @@
 
 @layer base {
   * {
-    @apply border-border box-border;
+    @apply box-border border-border;
   }
 }
