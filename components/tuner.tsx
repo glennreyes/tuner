@@ -4,8 +4,11 @@ import type { FC } from 'react';
 
 import { cn } from '@/lib/utils';
 import { PitchDetector } from 'pitchy';
-import { useMemo, useState } from 'react';
-import { Analyser, UserMedia, context, start } from 'tone';
+import { useState } from 'react';
+import { Analyser, Meter, UserMedia, context, start } from 'tone';
+
+import { Button } from './ui/button';
+import { Progress } from './ui/progress';
 
 const standardGuitarTuning = {
   A2: 110,
@@ -15,15 +18,23 @@ const standardGuitarTuning = {
   E4: 329.63,
   G3: 196,
 } as const;
-// Amount of range in Hz we render on the screen around the tuning pitch
-const range = 50;
+// Minimum and maximum volume values in dB
+const minVolume = -48;
+const maxVolume = -24;
+// Amount of range in cents we render on the screen around the tuning pitch
+const range = 100;
 // Amount of Hz considered to be in tune
 const deviation = 1;
+const bars = Array.from({ length: range / 2 + 1 }, (_, i) => i - range / 4);
 
 type Tuning = typeof standardGuitarTuning;
 type Note = keyof typeof standardGuitarTuning;
 type TuningEntries = [Note, (typeof standardGuitarTuning)[Note]][];
 
+const hzToCents = (frequency: number, referenceFrequency: number) =>
+  1200 * Math.log2(frequency / referenceFrequency);
+const centsToHz = (cents: number, referenceFrequency: number) =>
+  referenceFrequency * Math.pow(2, cents / 1200);
 const getClosestNote = (pitch: number, tuning: Tuning): Note | null => {
   const closest: { difference: number; note: Note | null } = {
     difference: Number.POSITIVE_INFINITY,
@@ -42,7 +53,12 @@ const getClosestNote = (pitch: number, tuning: Tuning): Note | null => {
     }
   }
 
-  return closest.difference <= range ? closest.note : null;
+  const tuningPitch = closest.note ? tuning[closest.note] : 0;
+  const rangeInHz = closest.note
+    ? Math.abs(centsToHz(range / 2, tuning[closest.note]) - tuningPitch)
+    : null;
+
+  return rangeInHz && closest.difference <= rangeInHz ? closest.note : null;
 };
 
 export const Tuner: FC = () => {
@@ -50,6 +66,7 @@ export const Tuner: FC = () => {
   const [note, setNote] = useState<Note | null>(null);
   const [isListening, setIsListening] = useState(false);
   const [isCapturing, setIsCapturing] = useState(false);
+  const [volume, setVolume] = useState(0);
   const [isInTune, setIsInTune] = useState(false);
   const detectPitch = async () => {
     if (isListening) {
@@ -60,7 +77,8 @@ export const Tuner: FC = () => {
 
     await start();
     const analyser = new Analyser('waveform', 2048);
-    const microphone = new UserMedia().connect(analyser);
+    const meter = new Meter();
+    const microphone = new UserMedia().connect(analyser).connect(meter);
 
     await microphone.open();
 
@@ -71,7 +89,15 @@ export const Tuner: FC = () => {
         dataArray,
         context.sampleRate,
       );
-      const isCaptureRange = pitch !== 0 && clarity > 0.95;
+      const volumeDb = meter.getValue() as number;
+      const inputVolume = Math.min(
+        100,
+        Math.max(0, ((volumeDb - minVolume) / (maxVolume - minVolume)) * 100),
+      );
+
+      setVolume(inputVolume);
+
+      const isCaptureRange = pitch !== 0 && clarity > 0.96 && inputVolume !== 0;
 
       if (isCaptureRange) {
         const closestNote = getClosestNote(pitch, standardGuitarTuning);
@@ -95,80 +121,94 @@ export const Tuner: FC = () => {
     getPitch();
   };
   const handleStart = () => detectPitch();
-  const handleStop = () => {
-    setIsListening(false);
-    setPitch(null);
-  };
-  const frequencies = useMemo(
-    () => Array.from({ length: range + 1 }, (_, i) => i - range / 2),
-    [],
-  );
   const tuningPitch = note ? standardGuitarTuning[note] : 0;
-  const cursorPosition = useMemo(
-    () =>
-      pitch
-        ? (((Number(pitch.toFixed(1)) - tuningPitch) / range) * 100) / 2 + 50
-        : 0,
-    [pitch, tuningPitch],
-  );
+  const cents = pitch ? hzToCents(pitch, tuningPitch) : 0;
 
   return (
-    <div className="grid min-w-80 items-center justify-center gap-12">
-      {isListening ? (
-        <>
-          <div className="grid gap-12">
-            <p
-              className={cn(
-                'text-center text-9xl font-bold transition',
-                isInTune ? 'text-success' : 'text-muted-foreground',
-                !isCapturing && 'opacity-0',
-              )}
-            >
-              {note?.charAt(0) ?? '-'}
-            </p>
+    <div
+      className={cn(
+        'grid min-w-80 items-center justify-center gap-12 rounded-3xl p-8 ring-1 transition',
+        isListening
+          ? 'bg-black/5 shadow-xl shadow-secondary/25 ring-primary/10'
+          : 'ring-primary/5 hover:shadow-xl hover:shadow-secondary/10',
+      )}
+    >
+      <div
+        className={cn('grid min-w-80 items-center justify-center gap-12', {
+          'opacity-25': !isListening,
+        })}
+      >
+        <div className="grid gap-12">
+          <p
+            className={cn(
+              'text-center text-9xl font-bold transition',
+              isInTune ? 'text-success' : 'text-muted-foreground',
+              {
+                'duration-400 opacity-0 blur-lg delay-500':
+                  !isCapturing || !note,
+              },
+            )}
+          >
+            {note?.charAt(0) ?? '-'}
+          </p>
+          <div className="grid gap-4">
+            <div className="flex justify-between text-muted">
+              <div className="flex-1 text-left">-50</div>
+              <div className="text-center">0</div>
+              <div className="flex-1 text-right">+50</div>
+            </div>
             <div>
               <div className="flex items-center gap-3">
-                {frequencies.map((frequency) => (
+                {bars.map((bar) => (
                   <div
                     className={cn('h-4 w-0.5 rounded transition', {
-                      'bg-gray-300': frequency !== 0,
-                      'h-6 bg-gray-500': frequency % 5 === 0 && frequency !== 0,
-                      'h-8 bg-primary': frequency === 0,
-                      'scale-75 opacity-75': !isCapturing,
+                      'bg-gray-300': bar !== 0,
+                      'h-6 bg-gray-500': bar % 5 === 0 && bar !== 0,
+                      'h-8 bg-primary': bar === 0,
+                      'scale-75 opacity-75 delay-500': !isCapturing || !note,
                     })}
-                    key={frequency}
+                    key={bar}
                   />
                 ))}
               </div>
               <div
-                className={cn(
-                  'absolute top-1/2 h-16 w-2 -translate-x-1/2 -translate-y-1/2 rounded transition',
-                  {
-                    'scale-95 opacity-0': !isCapturing || !note,
-                  },
-                  isInTune ? 'bg-success' : 'bg-muted-foreground',
-                )}
-                style={{ left: `${cursorPosition}%` }}
-              />
+                className="absolute inset-x-0 top-1/2 flex -translate-y-1/2 items-center justify-center transition duration-75"
+                style={{ transform: `translate(${cents}%, -50%)` }}
+              >
+                <div
+                  className={cn(
+                    'h-16 w-2 rounded transition-all',
+                    isInTune ? 'bg-success' : 'bg-muted-foreground',
+                    {
+                      'scale-95 opacity-0 delay-500': !isCapturing || !note,
+                    },
+                  )}
+                />
+              </div>
             </div>
           </div>
-          <div className="grid gap-2">
-            <p className="text-center tabular-nums">
-              Pitch: {pitch?.toFixed(2)} Hz
-            </p>
-            <p className="text-center tabular-nums">
-              Tuning: {tuningPitch.toFixed(2)} Hz
-            </p>
-            <p className="text-center tabular-nums">
-              Position: {cursorPosition.toFixed(2)} %
-            </p>
-
-            <button onClick={handleStop}>Stop</button>
-          </div>
-        </>
-      ) : (
-        <button onClick={handleStart}>Start</button>
-      )}
+        </div>
+        <div className="grid gap-2">
+          <p
+            className={cn('text-center tabular-nums text-primary transition', {
+              'duration-400 opacity-0 blur-lg delay-500': !isCapturing || !note,
+            })}
+          >
+            {pitch ? `${pitch.toFixed(1)} Hz` : '-'}
+          </p>
+        </div>
+        <Progress value={volume} />
+      </div>
+      <Button
+        className={cn(
+          'duration-400 absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 transition',
+          { 'pointer-events-none opacity-0 blur-2xl': isListening },
+        )}
+        onClick={handleStart}
+        size="lg"
+      >
+        Start Tuning
+      </Button>
     </div>
   );
 };
