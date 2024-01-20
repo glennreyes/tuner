@@ -129,7 +129,7 @@ export const Tuner: FC = () => {
       className={cn(
         'grid min-w-80 items-center justify-center gap-12 rounded-3xl p-8 ring-1 transition',
         isListening
-          ? 'bg-black/5 shadow-xl shadow-secondary/25 ring-primary/10'
+          ? 'bg-black/15 shadow-xl shadow-secondary/25 ring-primary/10'
           : 'ring-primary/5 hover:shadow-xl hover:shadow-secondary/10',
       )}
     >
@@ -158,14 +158,17 @@ export const Tuner: FC = () => {
               <div className="flex-1 text-right">+50</div>
             </div>
             <div>
-              <div className="flex items-center gap-3">
+              <div
+                className={cn('flex items-end gap-3 transition', {
+                  'opacity-50 delay-500': !isCapturing || !note,
+                })}
+              >
                 {bars.map((bar) => (
                   <div
-                    className={cn('h-4 w-0.5 rounded transition', {
+                    className={cn('h-8 w-0.5 rounded', {
                       'bg-gray-300': bar !== 0,
-                      'h-6 bg-gray-500': bar % 5 === 0 && bar !== 0,
-                      'h-8 bg-primary': bar === 0,
-                      'scale-75 opacity-75 delay-500': !isCapturing || !note,
+                      'h-10 bg-gray-500': bar % 5 === 0 && bar !== 0,
+                      'h-12 bg-primary': bar === 0,
                     })}
                     key={bar}
                   />
@@ -177,11 +180,11 @@ export const Tuner: FC = () => {
               >
                 <div
                   className={cn(
-                    'h-16 w-2 rounded transition-all',
+                    'h-20 w-2 rounded shadow-xl shadow-secondary/25 transition-all',
                     isInTune ? 'bg-success' : 'bg-muted-foreground',
-                    {
-                      'scale-95 opacity-0 delay-500': !isCapturing || !note,
-                    },
+                    !isCapturing || !note
+                      ? 'scale-95 opacity-0 delay-500'
+                      : 'opacity-95',
                   )}
                 />
               </div>
