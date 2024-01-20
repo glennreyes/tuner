@@ -31,18 +31,18 @@ interface RootLayoutProps {
   children: ReactNode;
 }
 
-export default function RootLayout({ children }: RootLayoutProps) {
-  return (
-    <html lang="en">
-      <body
-        className={cn(
-          mono.variable,
-          sans.variable,
-          'bg-background text-foreground dark font-sans motion-safe:scroll-smooth',
-        )}
-      >
-        {children}
-      </body>
-    </html>
-  );
-}
+const RootLayout = ({ children }: RootLayoutProps) => (
+  <html lang="en">
+    <body
+      className={cn(
+        mono.variable,
+        sans.variable,
+        'dark bg-background font-sans text-foreground motion-safe:scroll-smooth',
+      )}
+    >
+      {children}
+    </body>
+  </html>
+);
+
+export default RootLayout;
