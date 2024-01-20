@@ -15,13 +15,13 @@ const standardGuitarTuning = {
   E4: 329.63,
   G3: 196,
 } as const;
+const range = 50;
 
 type Tuning = typeof standardGuitarTuning;
 type Note = keyof typeof standardGuitarTuning;
 type TuningEntries = [Note, (typeof standardGuitarTuning)[Note]][];
 
 const getNearestNote = (pitch: number, tuning: Tuning): Note | null => {
-  const range = 50;
   const closest: { difference: number; note: Note | null } = {
     difference: Number.POSITIVE_INFINITY,
     note: null,
@@ -95,9 +95,13 @@ export const Tuner: FC = () => {
     setIsListening(false);
     setPitch(null);
   };
+  const frequencies = Array.from(
+    { length: range + 1 },
+    (_, i) => i - range / 2,
+  );
 
   return (
-    <div className="grid min-w-80 items-center justify-center">
+    <div className="grid min-w-80 items-center justify-center gap-8">
       {!isListening && (
         <button disabled={isListening} onClick={handleStart}>
           Start
@@ -105,26 +109,36 @@ export const Tuner: FC = () => {
       )}
       {isListening && (
         <>
-          {note && (
-            <>
-              <p
-                className={cn(
-                  'text-center text-9xl font-bold',
-                  isInTune ? 'text-success' : 'text-primary',
-                )}
-              >
-                {note}
-              </p>
-              {pitch !== null && (
-                <>
-                  <p className="text-center tabular-nums">
-                    {pitch.toFixed(2)} Hz
-                  </p>
-                </>
+          <div className="grid gap-4">
+            <p
+              className={cn(
+                'text-center text-9xl font-bold',
+                isInTune ? 'text-success' : 'text-primary',
+                !note && 'opacity-0',
               )}
-            </>
-          )}
-          <button onClick={handleStop}>Stop</button>
+            >
+              {note?.charAt(0) ?? '-'}
+            </p>
+            <div>
+              <div className="flex items-center gap-3">
+                {frequencies.map((frequency) => (
+                  <div
+                    className={cn('h-4 w-0.5', {
+                      'bg-gray-300': frequency !== 0,
+                      'h-6 bg-gray-500': frequency % 5 === 0 && frequency !== 0,
+                      'h-8 bg-primary': frequency === 0,
+                    })}
+                    key={frequency}
+                  />
+                ))}
+              </div>
+              <div className="-ml-1/2 absolute left-1/2 top-0 h-full w-1 bg-primary" />
+            </div>
+          </div>
+          <div className="grid gap-2">
+            <p className="text-center tabular-nums">{pitch?.toFixed(2)} Hz</p>
+            <button onClick={handleStop}>Stop</button>
+          </div>
         </>
       )}
     </div>
