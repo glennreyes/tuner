@@ -1,9 +1,9 @@
 import { Tuner } from '@/components/tuner';
 
-const Home = () => (
+const RootPage = () => (
   <main className="items grid min-h-screen items-center justify-center">
     <Tuner />
   </main>
 );
 
-export default Home;
+export default RootPage;
