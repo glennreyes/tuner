@@ -74,6 +74,21 @@
 
 @layer base {
   * {
-    @apply box-border border-border;
+    @apply relative box-border min-w-0 border-border;
+  }
+
+  body {
+    @apply min-h-dvh;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    @apply text-balance;
+  }
+
+  p {
+    @apply text-pretty;
   }
 }
