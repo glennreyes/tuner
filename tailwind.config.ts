@@ -75,8 +75,8 @@ const config = {
         },
       },
       fontFamily: {
-        mono: ['var(--font-mono)', ...fontFamily.mono],
-        sans: ['var(--font-sans)', ...fontFamily.sans],
+        mono: ['var(--font-geist-mono)', ...fontFamily.mono],
+        sans: ['var(--font-geist-sans)', ...fontFamily.sans],
       },
       keyframes: {
         'accordion-down': {
