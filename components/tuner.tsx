@@ -10,7 +10,7 @@ import { Analyser, Meter, UserMedia, context, start } from 'tone';
 import { Button } from './ui/button';
 import { Progress } from './ui/progress';
 
-const standardGuitarTuning = {
+const standard = {
   A2: 110,
   B3: 246.94,
   D3: 146.83,
@@ -27,9 +27,9 @@ const range = 100;
 const deviation = 1;
 const bars = Array.from({ length: range / 2 + 1 }, (_, i) => i - range / 4);
 
-type Tuning = typeof standardGuitarTuning;
-type Note = keyof typeof standardGuitarTuning;
-type TuningEntries = [Note, (typeof standardGuitarTuning)[Note]][];
+type Tuning = typeof standard;
+type Note = keyof typeof standard;
+type TuningEntries = [Note, (typeof standard)[Note]][];
 
 const hzToCents = (frequency: number, referenceFrequency: number) =>
   1200 * Math.log2(frequency / referenceFrequency);
@@ -100,10 +100,10 @@ export const Tuner: FC = () => {
       const isCaptureRange = pitch !== 0 && clarity > 0.96 && inputVolume !== 0;
 
       if (isCaptureRange) {
-        const closestNote = getClosestNote(pitch, standardGuitarTuning);
+        const closestNote = getClosestNote(pitch, standard);
 
         if (closestNote !== null) {
-          const tuning = standardGuitarTuning[closestNote];
+          const tuning = standard[closestNote];
           const difference = Math.abs(tuning - pitch);
           const isInTune = difference <= deviation;
 
@@ -121,7 +121,7 @@ export const Tuner: FC = () => {
     getPitch();
   };
   const handleStart = () => detectPitch();
-  const tuningPitch = note ? standardGuitarTuning[note] : 0;
+  const tuningPitch = note ? standard[note] : 0;
   const cents = pitch ? hzToCents(pitch, tuningPitch) : 0;
 
   return (
