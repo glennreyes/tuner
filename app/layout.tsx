@@ -18,8 +18,8 @@ const sans = Inter({
 });
 
 export const metadata: Metadata = {
-  description: 'A simple web app to tune your string instrument.',
-  title: 'Napaling Tuner',
+  description: 'A chromatic tuner for musicians.',
+  title: 'Tuner',
 };
 
 export const viewport: Viewport = {
