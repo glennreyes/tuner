@@ -78,7 +78,7 @@
   }
 
   body {
-    @apply min-h-dvh;
+    @apply min-h-dvh min-w-80;
   }
 
   h1,
