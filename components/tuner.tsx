@@ -2,6 +2,7 @@
 
 import type { FC } from 'react';
 
+import { full } from '@/lib/frequencies';
 import { cn } from '@/lib/utils';
 import { PitchDetector } from 'pitchy';
 import { useState } from 'react';
@@ -10,14 +11,6 @@ import { Analyser, Meter, UserMedia, context, start } from 'tone';
 import { Button } from './ui/button';
 import { Progress } from './ui/progress';
 
-const standard = {
-  A2: 110,
-  B3: 246.94,
-  D3: 146.83,
-  E2: 82.41,
-  E4: 329.63,
-  G3: 196,
-} as const;
 // Minimum and maximum volume values in dB
 const minVolume = -48;
 const maxVolume = -24;
@@ -27,9 +20,9 @@ const range = 100;
 const deviation = 1;
 const bars = Array.from({ length: range / 2 + 1 }, (_, i) => i - range / 4);
 
-type Tuning = typeof standard;
-type Note = keyof typeof standard;
-type TuningEntries = [Note, (typeof standard)[Note]][];
+type Tuning = typeof full;
+type Note = keyof typeof full;
+type TuningEntries = [Note, (typeof full)[Note]][];
 
 const hzToCents = (frequency: number, referenceFrequency: number) =>
   1200 * Math.log2(frequency / referenceFrequency);
@@ -100,11 +93,11 @@ export const Tuner: FC = () => {
       const isCaptureRange = pitch !== 0 && clarity > 0.96 && inputVolume !== 0;
 
       if (isCaptureRange) {
-        const closestNote = getClosestNote(pitch, standard);
+        const closestNote = getClosestNote(pitch, full);
 
         if (closestNote !== null) {
-          const tuning = standard[closestNote];
-          const difference = Math.abs(tuning - pitch);
+          const referencePitch = full[closestNote];
+          const difference = Math.abs(referencePitch - pitch);
           const isInTune = difference <= deviation;
 
           setIsInTune(isInTune);
@@ -121,35 +114,34 @@ export const Tuner: FC = () => {
     getPitch();
   };
   const handleStart = () => detectPitch();
-  const tuningPitch = note ? standard[note] : 0;
+  const tuningPitch = note ? full[note] : 0;
   const cents = pitch ? hzToCents(pitch, tuningPitch) : 0;
 
   return (
     <div
       className={cn(
-        'grid min-w-80 items-center justify-center gap-12 rounded-3xl p-8 ring-1 transition',
+        'rounded-3xl p-8 ring-1 transition',
         isListening
           ? 'bg-black/15 shadow-xl shadow-secondary/25 ring-primary/10'
           : 'ring-primary/5 hover:shadow-xl hover:shadow-secondary/10',
       )}
     >
       <div
-        className={cn('grid min-w-80 items-center justify-center gap-12', {
+        className={cn('grid items-center gap-12', {
           'opacity-25': !isListening,
         })}
       >
         <div className="grid gap-12">
           <p
             className={cn(
-              'text-center text-9xl font-bold transition',
+              'text-center text-8xl font-semibold',
               isInTune ? 'text-success' : 'text-muted-foreground',
               {
-                'duration-400 opacity-0 blur-lg delay-500':
-                  !isCapturing || !note,
+                'opacity-0': !isCapturing || !note,
               },
             )}
           >
-            {note?.charAt(0) ?? '-'}
+            {note ?? '-'}
           </p>
           <div className="grid gap-4">
             <div className="flex justify-between text-muted">
@@ -159,19 +151,23 @@ export const Tuner: FC = () => {
             </div>
             <div>
               <div
-                className={cn('flex items-end gap-3 transition', {
+                className={cn('flex items-end justify-between transition', {
                   'opacity-50 delay-500': !isCapturing || !note,
                 })}
               >
                 {bars.map((bar) => (
-                  <div
-                    className={cn('h-8 w-0.5 rounded', {
-                      'bg-gray-300': bar !== 0,
-                      'h-10 bg-gray-500': bar % 5 === 0 && bar !== 0,
-                      'h-12 bg-primary': bar === 0,
-                    })}
-                    key={bar}
-                  />
+                  <div key={bar}>
+                    <div
+                      className={cn(
+                        'h-8 w-px rounded sm:w-0.5',
+                        bar === 0
+                          ? 'h-12 bg-primary'
+                          : bar % 5 === 0
+                            ? 'h-10 bg-gray-500'
+                            : 'bg-gray-300',
+                      )}
+                    />
+                  </div>
                 ))}
               </div>
               <div
@@ -180,7 +176,7 @@ export const Tuner: FC = () => {
               >
                 <div
                   className={cn(
-                    'h-20 w-2 rounded shadow-xl shadow-secondary/25 transition-all',
+                    'h-20 w-1 rounded shadow-xl shadow-secondary/25 transition-all sm:w-2',
                     isInTune ? 'bg-success' : 'bg-muted-foreground',
                     !isCapturing || !note
                       ? 'scale-95 opacity-0 delay-500'

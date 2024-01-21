@@ -1,7 +1,7 @@
 import { Tuner } from '@/components/tuner';
 
 const RootPage = () => (
-  <main className="items grid min-h-screen items-center justify-center p-2">
+  <main className="mx-auto grid min-h-dvh max-w-screen-md items-center p-2">
     <Tuner />
   </main>
 );
