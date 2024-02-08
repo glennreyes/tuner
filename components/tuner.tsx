@@ -4,6 +4,7 @@ import type { FC } from 'react';
 
 import { full } from '@/lib/frequencies';
 import { cn } from '@/lib/utils';
+import { Mic, MicOff } from 'lucide-react';
 import { PitchDetector } from 'pitchy';
 import { useState } from 'react';
 import { Analyser, Meter, UserMedia, context, start } from 'tone';
@@ -13,7 +14,7 @@ import { Progress } from './ui/progress';
 
 // Minimum and maximum volume values in dB
 const minVolume = -48;
-const maxVolume = -24;
+const maxVolume = -12;
 // Amount of range in cents we render on the screen around the tuning pitch
 const range = 100;
 // Amount of Hz considered to be in tune
@@ -61,6 +62,7 @@ export const Tuner: FC = () => {
   const [isCapturing, setIsCapturing] = useState(false);
   const [volume, setVolume] = useState(0);
   const [isInTune, setIsInTune] = useState(false);
+  const [device, setDevice] = useState<string | undefined>();
   const detectPitch = async () => {
     if (isListening) {
       return;
@@ -71,9 +73,16 @@ export const Tuner: FC = () => {
     await start();
     const analyser = new Analyser('waveform', 2048);
     const meter = new Meter();
-    const microphone = new UserMedia().connect(analyser).connect(meter);
+    const microphone = await new UserMedia()
+      .connect(analyser)
+      .connect(meter)
+      .open();
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    const deviceName = devices.find(
+      (device) => device.deviceId === microphone.deviceId,
+    )?.label;
 
-    await microphone.open();
+    setDevice(deviceName);
 
     const getPitch = () => {
       const dataArray = analyser.getValue() as Float32Array;
@@ -105,6 +114,8 @@ export const Tuner: FC = () => {
 
         setNote(closestNote);
         setPitch(pitch);
+      } else if (pitch) {
+        setPitch(0);
       }
 
       setIsCapturing(isCaptureRange);
@@ -115,14 +126,14 @@ export const Tuner: FC = () => {
   };
   const handleStart = () => detectPitch();
   const tuningPitch = note ? full[note] : 0;
-  const cents = pitch ? hzToCents(pitch, tuningPitch) : 0;
+  const cents = pitch && tuningPitch ? hzToCents(pitch, tuningPitch) : 0;
 
   return (
     <div
       className={cn(
-        'rounded-3xl p-8 ring-1 transition',
+        'rounded-3xl bg-black/15 p-8 ring-1 transition',
         isListening
-          ? 'bg-black/15 shadow-xl shadow-secondary/25 ring-primary/10'
+          ? ' shadow-xl shadow-secondary/25 ring-primary/10'
           : 'ring-primary/5 hover:shadow-xl hover:shadow-secondary/10',
       )}
     >
@@ -189,14 +200,37 @@ export const Tuner: FC = () => {
         </div>
         <div className="grid gap-2">
           <p
+            className={cn(
+              'text-center text-5xl tabular-nums text-primary transition',
+              {
+                'duration-400 opacity-50 delay-500': !isCapturing || !note,
+              },
+            )}
+          >
+            {Math.round(cents)} ct
+          </p>
+
+          <p
             className={cn('text-center tabular-nums text-primary transition', {
-              'duration-400 opacity-0 blur-lg delay-500': !isCapturing || !note,
+              'duration-400 opacity-50 delay-500': !isCapturing || !note,
             })}
           >
-            {pitch ? `${pitch.toFixed(1)} Hz` : '-'}
+            {(pitch ?? 0).toFixed(1)} Hz
           </p>
         </div>
-        <Progress value={volume} />
+        <div className="grid gap-4">
+          <div className="flex items-center gap-2">
+            {device ? (
+              <Mic className="h-5 w-5 text-muted-foreground" />
+            ) : (
+              <MicOff className="h-5 w-5 text-muted-foreground" />
+            )}
+            <p className="max-w-60 truncate text-sm text-muted-foreground">
+              {device}
+            </p>
+          </div>
+          <Progress value={volume} />
+        </div>
       </div>
       <Button
         className={cn(
