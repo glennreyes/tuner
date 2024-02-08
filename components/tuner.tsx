@@ -2,15 +2,22 @@
 
 import type { FC } from 'react';
 
-import { full } from '@/lib/frequencies';
+import { chromatic, standardTuning } from '@/lib/modes';
 import { cn } from '@/lib/utils';
 import { Mic, MicOff } from 'lucide-react';
 import { PitchDetector } from 'pitchy';
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { Analyser, Meter, UserMedia, context, start } from 'tone';
 
 import { Button } from './ui/button';
 import { Progress } from './ui/progress';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from './ui/select';
 
 // Minimum and maximum volume values in dB
 const minVolume = -48;
@@ -20,10 +27,14 @@ const range = 100;
 // Amount of Hz considered to be in tune
 const deviation = 1;
 const bars = Array.from({ length: range / 2 + 1 }, (_, i) => i - range / 4);
-
-type Tuning = typeof full;
-type Note = keyof typeof full;
-type TuningEntries = [Note, (typeof full)[Note]][];
+const modes = {
+  chromatic,
+  standardTuning,
+};
+type Mode = keyof typeof modes;
+type Tuning = (typeof modes)[keyof typeof modes];
+type Note = keyof typeof chromatic & keyof typeof standardTuning;
+type TuningEntries = [Note, Tuning[Note]][];
 
 const hzToCents = (frequency: number, referenceFrequency: number) =>
   1200 * Math.log2(frequency / referenceFrequency);
@@ -56,6 +67,7 @@ const getClosestNote = (pitch: number, tuning: Tuning): Note | null => {
 };
 
 export const Tuner: FC = () => {
+  const [mode, setMode] = useState<Mode>('chromatic');
   const [pitch, setPitch] = useState<null | number>(null);
   const [note, setNote] = useState<Note | null>(null);
   const [isListening, setIsListening] = useState(false);
@@ -63,7 +75,7 @@ export const Tuner: FC = () => {
   const [volume, setVolume] = useState(0);
   const [isInTune, setIsInTune] = useState(false);
   const [device, setDevice] = useState<string | undefined>();
-  const detectPitch = async () => {
+  const detectPitch = useCallback(async () => {
     if (isListening) {
       return;
     }
@@ -102,10 +114,10 @@ export const Tuner: FC = () => {
       const isCaptureRange = pitch !== 0 && clarity > 0.96 && inputVolume !== 0;
 
       if (isCaptureRange) {
-        const closestNote = getClosestNote(pitch, full);
+        const closestNote = getClosestNote(pitch, modes[mode]);
 
         if (closestNote !== null) {
-          const referencePitch = full[closestNote];
+          const referencePitch = modes[mode][closestNote];
           const difference = Math.abs(referencePitch - pitch);
           const isInTune = difference <= deviation;
 
@@ -123,9 +135,14 @@ export const Tuner: FC = () => {
     };
 
     getPitch();
-  };
+  }, [isListening, mode]);
   const handleStart = () => detectPitch();
-  const tuningPitch = note ? full[note] : 0;
+  const handleChangeMode = (mode: string) => {
+    if (mode === 'chromatic' || mode === 'standardTuning') {
+      setMode(mode);
+    }
+  };
+  const tuningPitch = note ? modes[mode][note] : 0;
   const cents = pitch && tuningPitch ? hzToCents(pitch, tuningPitch) : 0;
 
   return (
@@ -219,15 +236,26 @@ export const Tuner: FC = () => {
           </p>
         </div>
         <div className="grid gap-4">
-          <div className="flex items-center gap-2">
-            {device ? (
-              <Mic className="h-5 w-5 text-muted-foreground" />
-            ) : (
-              <MicOff className="h-5 w-5 text-muted-foreground" />
-            )}
-            <p className="max-w-60 truncate text-sm text-muted-foreground">
-              {device}
-            </p>
+          <div className="flex justify-between gap-2">
+            <div className="flex items-center gap-2">
+              {device ? (
+                <Mic className="h-5 w-5 text-muted-foreground" />
+              ) : (
+                <MicOff className="h-5 w-5 text-muted-foreground" />
+              )}
+              <p className="max-w-60 truncate text-sm text-muted-foreground">
+                {device}
+              </p>
+            </div>
+            <Select onValueChange={handleChangeMode} value={mode}>
+              <SelectTrigger className="w-32">
+                <SelectValue placeholder="Mode" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="chromatic">Chromatic</SelectItem>
+                <SelectItem value="standardTuning">Standard Guitar</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           <Progress value={volume} />
         </div>
