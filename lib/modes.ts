@@ -1,4 +1,4 @@
-export const chromatic = {
+const chromatic = {
   'A#0': 29.135_235_094_880_62,
   'A#1': 58.270_470_189_761_24,
   'A#2': 116.540_940_379_522_48,
@@ -119,13 +119,23 @@ export const chromatic = {
   G7: 3135.963_487_853_994_6,
   G8: 6271.926_975_710_987,
   G9: 12_543.853_951_421_974,
-} as const;
-
-export const standardTuning = {
+};
+const standardTuning = {
   A2: chromatic.A2,
   B3: chromatic.B3,
   D3: chromatic.D3,
   E2: chromatic.E2,
   E4: chromatic.E4,
   G3: chromatic.G3,
-} as const;
+};
+
+export const modes: Record<string, Record<Note, Pitch>> = {
+  chromatic,
+  standardTuning,
+};
+
+export type Mode = keyof typeof modes;
+
+export type Note = string;
+
+export type Pitch = number;

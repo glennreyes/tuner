@@ -1,12 +1,14 @@
 'use client';
 
+import type { Mode, Note } from '@/lib/modes';
 import type { FC } from 'react';
 
-import { chromatic, standardTuning } from '@/lib/modes';
+import { modes } from '@/lib/modes';
+import { getClosestNote, hzToCents, range } from '@/lib/pitch';
 import { cn } from '@/lib/utils';
 import { Mic, MicOff } from 'lucide-react';
 import { PitchDetector } from 'pitchy';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Analyser, Meter, UserMedia, context, start } from 'tone';
 
 import { Button } from './ui/button';
@@ -19,55 +21,16 @@ import {
   SelectValue,
 } from './ui/select';
 
-// Minimum and maximum volume values in dB
+// Volume ranges in dB
 const minVolume = -48;
 const maxVolume = -12;
-// Amount of range in cents we render on the screen around the tuning pitch
-const range = 100;
 // Amount of Hz considered to be in tune
 const deviation = 1;
 const bars = Array.from({ length: range / 2 + 1 }, (_, i) => i - range / 4);
-const modes = {
-  chromatic,
-  standardTuning,
-};
-type Mode = keyof typeof modes;
-type Tuning = (typeof modes)[keyof typeof modes];
-type Note = keyof typeof chromatic & keyof typeof standardTuning;
-type TuningEntries = [Note, Tuning[Note]][];
-
-const hzToCents = (frequency: number, referenceFrequency: number) =>
-  1200 * Math.log2(frequency / referenceFrequency);
-const centsToHz = (cents: number, referenceFrequency: number) =>
-  referenceFrequency * Math.pow(2, cents / 1200);
-const getClosestNote = (pitch: number, tuning: Tuning): Note | null => {
-  const closest: { difference: number; note: Note | null } = {
-    difference: Number.POSITIVE_INFINITY,
-    note: null,
-  };
-  const entries: TuningEntries = Object.entries(
-    tuning,
-  ) as unknown as TuningEntries;
-
-  for (const [note, frequency] of entries) {
-    const difference = Math.abs(frequency - pitch);
-
-    if (difference < closest.difference) {
-      closest.note = note;
-      closest.difference = difference;
-    }
-  }
-
-  const tuningPitch = closest.note ? tuning[closest.note] : 0;
-  const rangeInHz = closest.note
-    ? Math.abs(centsToHz(range / 2, tuning[closest.note]) - tuningPitch)
-    : null;
-
-  return rangeInHz && closest.difference <= rangeInHz ? closest.note : null;
-};
 
 export const Tuner: FC = () => {
-  const [mode, setMode] = useState<Mode>('chromatic');
+  const requestId = useRef<number>();
+  const [mode, setMode] = useState<Mode>('standardTuning');
   const [pitch, setPitch] = useState<null | number>(null);
   const [note, setNote] = useState<Note | null>(null);
   const [isListening, setIsListening] = useState(false);
@@ -75,13 +38,8 @@ export const Tuner: FC = () => {
   const [volume, setVolume] = useState(0);
   const [isInTune, setIsInTune] = useState(false);
   const [device, setDevice] = useState<string | undefined>();
+  const tuning = modes[mode];
   const detectPitch = useCallback(async () => {
-    if (isListening) {
-      return;
-    }
-
-    setIsListening(true);
-
     await start();
     const analyser = new Analyser('waveform', 2048);
     const meter = new Meter();
@@ -114,11 +72,13 @@ export const Tuner: FC = () => {
       const isCaptureRange = pitch !== 0 && clarity > 0.96 && inputVolume !== 0;
 
       if (isCaptureRange) {
-        const closestNote = getClosestNote(pitch, modes[mode]);
+        const closestNote = getClosestNote(pitch, mode);
 
         if (closestNote !== null) {
-          const referencePitch = modes[mode][closestNote];
-          const difference = Math.abs(referencePitch - pitch);
+          const referencePitch = tuning?.[closestNote];
+          const difference = referencePitch
+            ? Math.abs(referencePitch - pitch)
+            : 0;
           const isInTune = difference <= deviation;
 
           setIsInTune(isInTune);
@@ -131,18 +91,39 @@ export const Tuner: FC = () => {
       }
 
       setIsCapturing(isCaptureRange);
-      requestAnimationFrame(getPitch);
+      requestId.current = requestAnimationFrame(getPitch);
     };
 
     getPitch();
-  }, [isListening, mode]);
-  const handleStart = () => detectPitch();
-  const handleChangeMode = (mode: string) => {
-    if (mode === 'chromatic' || mode === 'standardTuning') {
-      setMode(mode);
+  }, [mode, tuning]);
+
+  useEffect(() => {
+    if (isListening) {
+      (() => detectPitch())();
+    }
+
+    return () => {
+      if (requestId.current) {
+        cancelAnimationFrame(requestId.current);
+      }
+    };
+  }, [detectPitch, isListening]);
+
+  const handleStart = () => {
+    setIsListening(true);
+  };
+  const handleValueChange = (value: string) => {
+    if (!(value === 'chromatic' || value === 'standardTuning')) {
+      return;
+    }
+
+    setMode(value);
+
+    if (requestId.current) {
+      cancelAnimationFrame(requestId.current);
     }
   };
-  const tuningPitch = note ? modes[mode][note] : 0;
+  const tuningPitch = note ? tuning?.[note] ?? 0 : 0;
   const cents = pitch && tuningPitch ? hzToCents(pitch, tuningPitch) : 0;
 
   return (
@@ -247,13 +228,18 @@ export const Tuner: FC = () => {
                 {device}
               </p>
             </div>
-            <Select onValueChange={handleChangeMode} value={mode}>
-              <SelectTrigger className="w-32">
+            <Button onClick={() => setIsListening(!isListening)} size="sm" />
+            <Select
+              disabled={!isListening}
+              onValueChange={handleValueChange}
+              value={mode}
+            >
+              <SelectTrigger className="w-40">
                 <SelectValue placeholder="Mode" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="chromatic">Chromatic</SelectItem>
                 <SelectItem value="standardTuning">Standard Guitar</SelectItem>
+                <SelectItem value="chromatic">Chromatic</SelectItem>
               </SelectContent>
             </Select>
           </div>

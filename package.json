@@ -21,7 +21,7 @@
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.0",
     "geist": "^1.2.2",
-    "lucide-react": "^0.323.0",
+    "lucide-react": "^0.325.0",
     "next": "^14.1.0",
     "pitchy": "^4.1.0",
     "react": "^18.2.0",
