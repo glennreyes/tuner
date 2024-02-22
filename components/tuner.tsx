@@ -228,7 +228,6 @@ export const Tuner: FC = () => {
                 {device}
               </p>
             </div>
-            <Button onClick={() => setIsListening(!isListening)} size="sm" />
             <Select
               disabled={!isListening}
               onValueChange={handleValueChange}
