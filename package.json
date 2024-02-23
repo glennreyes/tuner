@@ -1,6 +1,6 @@
 {
   "name": "tuner",
-  "description": "A chromatic tuner for musicians.",
+  "description": "An instrument tuner for musicians.",
   "author": "Glenn Reyes <glenn@glennreyes.com>",
   "version": "0.0.0",
   "private": true,

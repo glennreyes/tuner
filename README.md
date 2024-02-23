@@ -1,6 +1,6 @@
 # Tuner
 
-A chromatic tuner for musicians. This tuner helps you tune your instrument, using your device's microphone.
+An instrument tuner for musicians. This tuner helps you tune your instrument, using your device's microphone.
 
 ## Demo
 
