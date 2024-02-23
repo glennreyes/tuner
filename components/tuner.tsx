@@ -6,7 +6,7 @@ import type { FC } from 'react';
 import { modes } from '@/lib/modes';
 import { getClosestNote, hzToCents, range } from '@/lib/pitch';
 import { cn } from '@/lib/utils';
-import { Mic, MicOff } from 'lucide-react';
+import { Mic, MicOff, Volume2 } from 'lucide-react';
 import { PitchDetector } from 'pitchy';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Analyser, Meter, UserMedia, context, start } from 'tone';
@@ -33,7 +33,7 @@ const bars = Array.from({ length: range / 2 + 1 }, (_, i) => i - range / 4);
 
 export const Tuner: FC = () => {
   const requestId = useRef<number>();
-  const [mode, setMode] = useState<Mode>('guitarStandard');
+  const [mode, setMode] = useState<Mode>('chromatic');
   const [pitch, setPitch] = useState<null | number>(null);
   const [note, setNote] = useState<Note | null>(null);
   const [isListening, setIsListening] = useState(false);
@@ -126,14 +126,7 @@ export const Tuner: FC = () => {
   const cents = pitch && tuningPitch ? hzToCents(pitch, tuningPitch) : 0;
 
   return (
-    <div
-      className={cn(
-        'p-8 transition-shadow sm:rounded-3xl sm:bg-black/15 sm:ring-1',
-        isListening
-          ? 'sm:shadow-xl sm:shadow-secondary/25 sm:ring-primary/10'
-          : 'sm:ring-primary/5 sm:hover:shadow-xl sm:hover:shadow-secondary/10',
-      )}
-    >
+    <div>
       <div
         className={cn('grid items-center gap-12', {
           'opacity-25': !isListening,
@@ -184,7 +177,7 @@ export const Tuner: FC = () => {
               >
                 <div
                   className={cn(
-                    'h-20 w-1 rounded shadow-xl shadow-secondary/25 transition-all sm:w-2',
+                    'h-20 w-1 shadow-xl shadow-secondary/25 transition-all',
                     isInTune ? 'bg-success' : 'bg-muted-foreground',
                     !isCapturing || !note
                       ? 'scale-95 opacity-0 delay-500'
@@ -217,14 +210,6 @@ export const Tuner: FC = () => {
         </div>
         <div className="grid gap-4">
           <div className="flex justify-between gap-2">
-            <div className="flex items-center gap-2">
-              {device ? (
-                <Mic className="h-5 w-5 text-muted-foreground" />
-              ) : (
-                <MicOff className="h-5 w-5 text-muted-foreground" />
-              )}
-              <p className="truncate text-sm text-muted-foreground">{device}</p>
-            </div>
             <Select
               disabled={!isListening}
               onValueChange={handleValueChange}
@@ -250,8 +235,19 @@ export const Tuner: FC = () => {
                 </SelectGroup>
               </SelectContent>
             </Select>
+            <div className="flex items-center gap-2">
+              {device ? (
+                <Mic className="h-5 w-5 text-muted-foreground" />
+              ) : (
+                <MicOff className="h-5 w-5 text-muted-foreground" />
+              )}
+              <p className="truncate text-sm text-muted-foreground">{device}</p>
+            </div>
           </div>
-          <Progress value={volume} />
+          <div className="flex items-center gap-2">
+            <Volume2 className="h-5 w-5 text-muted-foreground" />
+            <Progress value={volume} />
+          </div>
         </div>
       </div>
       <Button
