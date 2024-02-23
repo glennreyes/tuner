@@ -19,11 +19,6 @@ export const getClosestNote = (pitch: number, mode: Mode): Note | null => {
     note: null,
   };
   const tuning = modes[mode];
-
-  if (!tuning) {
-    return null;
-  }
-
   const entries = Object.entries(tuning) as TuningEntries;
 
   for (const [note, frequency] of entries) {
@@ -39,9 +34,9 @@ export const getClosestNote = (pitch: number, mode: Mode): Note | null => {
     return null;
   }
 
-  const tuningPitch = tuning[closest.note] ?? 0;
+  const tuningPitch = tuning[closest.note];
   const rangeInHz = Math.abs(
-    centsToHz(range / 2, tuning[closest.note] ?? 0) - tuningPitch,
+    centsToHz(range / 2, tuning[closest.note]) - tuningPitch,
   );
 
   return rangeInHz && closest.difference <= rangeInHz ? closest.note : null;

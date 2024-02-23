@@ -119,19 +119,34 @@ const chromatic = {
   G7: 3135.963_487_853_994_6,
   G8: 6271.926_975_710_987,
   G9: 12_543.853_951_421_974,
-};
-const standardTuning = {
+} as const;
+const guitarStandard = {
   A2: chromatic.A2,
   B3: chromatic.B3,
   D3: chromatic.D3,
   E2: chromatic.E2,
   E4: chromatic.E4,
   G3: chromatic.G3,
-};
+} as const;
+const guitarDropD = {
+  A2: chromatic.A2,
+  B3: chromatic.B3,
+  D2: chromatic.D2,
+  E2: chromatic.E2,
+  G3: chromatic.G3,
+} as const;
+const ukuleleStandard = {
+  A4: chromatic.A4,
+  C4: chromatic.C4,
+  E4: chromatic.E4,
+  G4: chromatic.G4,
+} as const;
 
 export const modes: Record<string, Record<Note, Pitch>> = {
   chromatic,
-  standardTuning,
+  guitarDropD,
+  guitarStandard,
+  ukuleleStandard,
 };
 
 export type Mode = keyof typeof modes;

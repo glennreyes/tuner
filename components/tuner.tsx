@@ -16,7 +16,10 @@ import { Progress } from './ui/progress';
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
+  SelectSeparator,
   SelectTrigger,
   SelectValue,
 } from './ui/select';
@@ -30,7 +33,7 @@ const bars = Array.from({ length: range / 2 + 1 }, (_, i) => i - range / 4);
 
 export const Tuner: FC = () => {
   const requestId = useRef<number>();
-  const [mode, setMode] = useState<Mode>('standardTuning');
+  const [mode, setMode] = useState<Mode>('guitarStandard');
   const [pitch, setPitch] = useState<null | number>(null);
   const [note, setNote] = useState<Note | null>(null);
   const [isListening, setIsListening] = useState(false);
@@ -75,7 +78,7 @@ export const Tuner: FC = () => {
         const closestNote = getClosestNote(pitch, mode);
 
         if (closestNote !== null) {
-          const referencePitch = tuning?.[closestNote];
+          const referencePitch = tuning[closestNote];
           const difference = referencePitch
             ? Math.abs(referencePitch - pitch)
             : 0;
@@ -113,17 +116,13 @@ export const Tuner: FC = () => {
     setIsListening(true);
   };
   const handleValueChange = (value: string) => {
-    if (!(value === 'chromatic' || value === 'standardTuning')) {
-      return;
-    }
-
     setMode(value);
 
     if (requestId.current) {
       cancelAnimationFrame(requestId.current);
     }
   };
-  const tuningPitch = note ? tuning?.[note] ?? 0 : 0;
+  const tuningPitch = note ? tuning[note] : 0;
   const cents = pitch && tuningPitch ? hzToCents(pitch, tuningPitch) : 0;
 
   return (
@@ -224,9 +223,7 @@ export const Tuner: FC = () => {
               ) : (
                 <MicOff className="h-5 w-5 text-muted-foreground" />
               )}
-              <p className="max-w-60 truncate text-sm text-muted-foreground">
-                {device}
-              </p>
+              <p className="truncate text-sm text-muted-foreground">{device}</p>
             </div>
             <Select
               disabled={!isListening}
@@ -237,8 +234,20 @@ export const Tuner: FC = () => {
                 <SelectValue placeholder="Mode" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="standardTuning">Standard Guitar</SelectItem>
-                <SelectItem value="chromatic">Chromatic</SelectItem>
+                <SelectGroup>
+                  <SelectItem value="chromatic">Chromatic</SelectItem>
+                </SelectGroup>
+                <SelectSeparator />
+                <SelectGroup>
+                  <SelectLabel>Guitar</SelectLabel>
+                  <SelectItem value="guitarStandard">Standard</SelectItem>
+                  <SelectItem value="guitarDropD">Drop D</SelectItem>
+                </SelectGroup>
+                <SelectSeparator />
+                <SelectGroup>
+                  <SelectLabel>Ukulele</SelectLabel>
+                  <SelectItem value="ukuleleStandard">Standard</SelectItem>
+                </SelectGroup>
               </SelectContent>
             </Select>
           </div>
