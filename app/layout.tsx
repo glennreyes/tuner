@@ -33,6 +33,7 @@ const RootLayout = ({ children }: RootLayoutProps) => (
       )}
     >
       {children}
+
       <Analytics />
       <SpeedInsights />
     </body>

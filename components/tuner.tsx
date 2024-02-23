@@ -128,10 +128,10 @@ export const Tuner: FC = () => {
   return (
     <div
       className={cn(
-        'rounded-3xl bg-black/15 p-8 ring-1 transition',
+        'p-8 transition-shadow sm:rounded-3xl sm:bg-black/15 sm:ring-1',
         isListening
-          ? ' shadow-xl shadow-secondary/25 ring-primary/10'
-          : 'ring-primary/5 hover:shadow-xl hover:shadow-secondary/10',
+          ? 'sm:shadow-xl sm:shadow-secondary/25 sm:ring-primary/10'
+          : 'sm:ring-primary/5 sm:hover:shadow-xl sm:hover:shadow-secondary/10',
       )}
     >
       <div
