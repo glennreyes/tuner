@@ -237,11 +237,15 @@ export const Tuner: FC = () => {
             </Select>
             <div className="flex items-center gap-2">
               {device ? (
-                <Mic className="h-5 w-5 text-muted-foreground" />
+                <>
+                  <Mic className="h-5 w-5 text-muted-foreground" />
+                  <p className="truncate text-sm text-muted-foreground">
+                    {device}
+                  </p>
+                </>
               ) : (
                 <MicOff className="h-5 w-5 text-muted-foreground" />
               )}
-              <p className="truncate text-sm text-muted-foreground">{device}</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
